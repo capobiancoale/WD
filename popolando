@@ -1,0 +1,312 @@
+-- =========================
+-- POPULATE TABLES
+-- =========================
+
+-- -------------------------
+-- 1. CLIENT
+-- -------------------------
+INSERT INTO client (user_id, first_name, last_name, email, phone, registration_date, status) VALUES
+(1,  'Marco',      'Rossi',      'marco.rossi@gmail.com',          '+39 347 1234567', '2023-03-12 08:45:00+01', 'active'),
+(2,  'Giulia',     'Ferrari',    'giulia.ferrari@outlook.com',     '+39 338 9876543', '2023-05-22 14:20:00+01', 'active'),
+(3,  'Luca',       'Bianchi',    'luca.bianchi@libero.it',         '+39 320 5554433', '2023-07-08 10:00:00+01', 'active'),
+(4,  'Sofia',      'Conti',      'sofia.conti@hotmail.com',        '+39 391 7778899', '2023-09-01 09:30:00+01', 'inactive'),
+(5,  'Alessandro', 'Marino',     'a.marino@gmail.com',             '+39 346 3332211', '2023-11-15 16:00:00+01', 'active'),
+(6,  'Chiara',     'Greco',      'chiara.greco@yahoo.it',          '+39 329 6665544', '2024-01-10 11:15:00+01', 'active'),
+(7,  'Davide',     'Ricci',      'davide.ricci@gmail.com',         '+39 335 1112233', '2024-03-27 08:00:00+01', 'active'),
+(8,  'Elena',      'Lombardi',   'elena.lombardi@outlook.com',     '+39 340 4445566', '2024-05-05 13:45:00+01', 'inactive'),
+(9,  'Francesco',  'Moretti',    'f.moretti@gmail.com',            '+39 366 9998877', '2024-08-19 07:30:00+01', 'active'),
+(10, 'Valentina',  'Barbieri',   'vale.barbieri@libero.it',        '+39 347 0001122', '2024-10-02 17:20:00+01', 'active'),
+(11, 'Matteo',     'Esposito',   'matteo.esposito@gmail.com',      '+39 331 2223344', '2024-11-11 09:00:00+01', 'active'),
+(12, 'Laura',      'Gallo',      'laura.gallo@gmail.com',          '+39 393 5556677', '2025-01-20 10:30:00+01', 'active'),
+(13, 'Simone',     'Marini',     'simone.marini@hotmail.it',       '+39 348 7778890', '2025-03-05 15:00:00+01', 'active'),
+(14, 'Federica',   'Costa',      'fede.costa@gmail.com',           '+39 360 3334455', '2025-04-18 12:00:00+01', 'active'),
+(15, 'Riccardo',   'Fontana',    'riccardo.fontana@outlook.com',   '+39 349 8889901', '2025-06-30 08:30:00+01', 'active');
+
+
+-- -------------------------
+-- 2. SUBSCRIPTION PLAN
+-- -------------------------
+INSERT INTO subscription_plan (plan_id, user_id, plan_type, price, length_days, start_date, end_date, status) VALUES
+(1,  1,  'annual',        89.99,  365, '2024-01-01', '2024-12-31', 'expired'),
+(2,  1,  'annual',        89.99,  365, '2025-01-01', '2025-12-31', 'expired'),
+(3,  1,  'annual',        94.99,  365, '2026-01-01', '2026-12-31', 'active'),
+(4,  2,  'monthly',       9.99,   30,  '2026-01-05', '2026-02-04', 'expired'),
+(5,  2,  'monthly',       9.99,   30,  '2026-02-05', '2026-03-06', 'active'),
+(6,  3,  'pay_as_you_go', 0.00,   NULL,'2024-07-08', NULL,         'active'),
+(7,  4,  'monthly',       9.99,   30,  '2025-09-01', '2025-09-30', 'cancelled'),
+(8,  5,  'annual',        94.99,  365, '2026-01-01', '2026-12-31', 'active'),
+(9,  6,  'monthly',       9.99,   30,  '2026-02-01', '2026-02-28', 'active'),
+(10, 7,  'pay_as_you_go', 0.00,   NULL,'2024-03-27', NULL,         'active'),
+(11, 8,  'annual',        89.99,  365, '2024-06-01', '2025-05-31', 'expired'),
+(12, 9,  'monthly',       9.99,   30,  '2026-02-01', '2026-02-28', 'active'),
+(13, 10, 'annual',        94.99,  365, '2026-01-01', '2026-12-31', 'active'),
+(14, 11, 'monthly',       9.99,   30,  '2026-02-01', '2026-02-28', 'active'),
+(15, 12, 'pay_as_you_go', 0.00,   NULL,'2025-01-20', NULL,         'active'),
+(16, 13, 'annual',        94.99,  365, '2025-03-05', '2026-03-04', 'active'),
+(17, 14, 'monthly',       9.99,   30,  '2026-02-15', '2026-03-16', 'active'),
+(18, 15, 'pay_as_you_go', 0.00,   NULL,'2025-07-01', NULL,         'active');
+
+
+-- -------------------------
+-- 3. STATION
+-- -------------------------
+INSERT INTO station (station_id, latitude_station, longitude_station) VALUES
+(1,  45.464161,  9.190336),   -- Milano Duomo
+(2,  45.485937,  9.204648),   -- Milano Centrale
+(3,  45.452278,  9.173990),   -- Navigli / Porta Genova
+(4,  45.483569,  9.188056),   -- Isola / Stazione Garibaldi
+(5,  45.472037,  9.157751),   -- Fiera Milano City / Bullona
+(6,  45.474523,  9.213989),   -- Porta Venezia
+(7,  45.444668,  9.198045),   -- Porta Romana / Bocconi
+(8,  45.469116,  9.181394),   -- Brera / Lanza
+(9,  45.460571,  9.228917),   -- Città Studi / Politecnico
+(10, 45.497843,  9.209312);   -- Bicocca / Zara
+
+
+-- -------------------------
+-- 4. PLAN STATION ACCESS
+-- -------------------------
+-- Annual plans → full city access
+INSERT INTO plan_station_access (plan_id, station_id) VALUES
+(1,1),(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8),(1,9),(1,10),
+(2,1),(2,2),(2,3),(2,4),(2,5),(2,6),(2,7),(2,8),(2,9),(2,10),
+(3,1),(3,2),(3,3),(3,4),(3,5),(3,6),(3,7),(3,8),(3,9),(3,10),
+(8,1),(8,2),(8,3),(8,4),(8,5),(8,6),(8,7),(8,8),(8,9),(8,10),
+(11,1),(11,2),(11,3),(11,4),(11,5),(11,6),(11,7),(11,8),(11,9),(11,10),
+(13,1),(13,2),(13,3),(13,4),(13,5),(13,6),(13,7),(13,8),(13,9),(13,10),
+(16,1),(16,2),(16,3),(16,4),(16,5),(16,6),(16,7),(16,8),(16,9),(16,10),
+-- Monthly plans → zone centrale + alcune stazioni
+(4,1),(4,2),(4,3),(4,6),(4,8),
+(5,1),(5,2),(5,3),(5,6),(5,8),
+(7,1),(7,3),(7,7),
+(9,1),(9,3),(9,6),(9,7),(9,8),
+(12,1),(12,2),(12,9),
+(14,1),(14,2),(14,4),(14,8),
+(17,1),(17,3),(17,7),(17,8),
+-- Pay-as-you-go → stazione di registrazione
+(6,1),(6,3),
+(10,1),(10,8),
+(15,1),(15,2),
+(18,1),(18,3),(18,7);
+
+
+-- -------------------------
+-- 5. DOCK
+-- -------------------------
+INSERT INTO dock (dock_id, station_id, dock_number, dock_status) VALUES
+-- Stazione 1 – Duomo (6 dock)
+(1,  1, 1, 'occupied'),
+(2,  1, 2, 'occupied'),
+(3,  1, 3, 'available'),
+(4,  1, 4, 'occupied'),
+(5,  1, 5, 'out_of_order'),
+(6,  1, 6, 'available'),
+-- Stazione 2 – Centrale (6 dock)
+(7,  2, 1, 'occupied'),
+(8,  2, 2, 'available'),
+(9,  2, 3, 'occupied'),
+(10, 2, 4, 'available'),
+(11, 2, 5, 'occupied'),
+(12, 2, 6, 'out_of_order'),
+-- Stazione 3 – Navigli (5 dock)
+(13, 3, 1, 'occupied'),
+(14, 3, 2, 'occupied'),
+(15, 3, 3, 'available'),
+(16, 3, 4, 'occupied'),
+(17, 3, 5, 'available'),
+-- Stazione 4 – Isola/Garibaldi (5 dock)
+(18, 4, 1, 'available'),
+(19, 4, 2, 'occupied'),
+(20, 4, 3, 'available'),
+(21, 4, 4, 'occupied'),
+(22, 4, 5, 'out_of_order'),
+-- Stazione 5 – Fiera (4 dock)
+(23, 5, 1, 'occupied'),
+(24, 5, 2, 'available'),
+(25, 5, 3, 'occupied'),
+(26, 5, 4, 'available'),
+-- Stazione 6 – Porta Venezia (4 dock)
+(27, 6, 1, 'occupied'),
+(28, 6, 2, 'available'),
+(29, 6, 3, 'occupied'),
+(30, 6, 4, 'available'),
+-- Stazione 7 – Porta Romana (4 dock)
+(31, 7, 1, 'available'),
+(32, 7, 2, 'occupied'),
+(33, 7, 3, 'available'),
+(34, 7, 4, 'occupied'),
+-- Stazione 8 – Brera (4 dock)
+(35, 8, 1, 'occupied'),
+(36, 8, 2, 'available'),
+(37, 8, 3, 'occupied'),
+(38, 8, 4, 'available'),
+-- Stazione 9 – Città Studi (4 dock)
+(39, 9, 1, 'available'),
+(40, 9, 2, 'occupied'),
+(41, 9, 3, 'available'),
+(42, 9, 4, 'occupied'),
+-- Stazione 10 – Bicocca (4 dock)
+(43, 10, 1, 'occupied'),
+(44, 10, 2, 'available'),
+(45, 10, 3, 'occupied'),
+(46, 10, 4, 'available');
+
+
+-- -------------------------
+-- 6. BIKE
+-- -------------------------
+INSERT INTO bike (bike_id, type, status, battery_level, station_id, dock_id) VALUES
+-- Stazione 1 – Duomo
+(1,  'STANDARD', 'available',      NULL, 1,  1),
+(2,  'ELECTRIC', 'available',      82,   1,  2),
+(3,  'STANDARD', 'available',      NULL, 1,  4),
+-- Stazione 2 – Centrale
+(4,  'ELECTRIC', 'available',      91,   2,  7),
+(5,  'STANDARD', 'available',      NULL, 2,  9),
+(6,  'ELECTRIC', 'available',      67,   2,  11),
+-- Stazione 3 – Navigli
+(7,  'STANDARD', 'available',      NULL, 3,  13),
+(8,  'ELECTRIC', 'available',      54,   3,  14),
+(9,  'STANDARD', 'available',      NULL, 3,  16),
+-- Stazione 4 – Isola
+(10, 'ELECTRIC', 'available',      78,   4,  19),
+(11, 'STANDARD', 'available',      NULL, 4,  21),
+-- Stazione 5 – Fiera
+(12, 'ELECTRIC', 'available',      95,   5,  23),
+(13, 'STANDARD', 'available',      NULL, 5,  25),
+-- Stazione 6 – Porta Venezia
+(14, 'ELECTRIC', 'available',      43,   6,  27),
+(15, 'STANDARD', 'available',      NULL, 6,  29),
+-- Stazione 7 – Porta Romana
+(16, 'ELECTRIC', 'available',      88,   7,  32),
+(17, 'STANDARD', 'available',      NULL, 7,  34),
+-- Stazione 8 – Brera
+(18, 'ELECTRIC', 'available',      72,   8,  35),
+(19, 'STANDARD', 'available',      NULL, 8,  37),
+-- Stazione 9 – Città Studi
+(20, 'STANDARD', 'available',      NULL, 9,  40),
+(21, 'ELECTRIC', 'available',      60,   9,  42),
+-- Stazione 10 – Bicocca
+(22, 'ELECTRIC', 'available',      85,   10, 43),
+(23, 'STANDARD', 'available',      NULL, 10, 45),
+-- Bici in corsa
+(24, 'STANDARD', 'in_ride',        NULL, NULL, NULL),
+(25, 'ELECTRIC', 'in_ride',        38,   NULL, NULL),
+(26, 'STANDARD', 'in_ride',        NULL, NULL, NULL),
+-- Bici in manutenzione
+(27, 'ELECTRIC', 'maintenance',    12,   NULL, NULL),
+(28, 'STANDARD', 'maintenance',    NULL, NULL, NULL),
+-- Bici dismesse
+(29, 'STANDARD', 'decommissioned', NULL, NULL, NULL),
+(30, 'ELECTRIC', 'decommissioned', NULL, NULL, NULL);
+
+
+-- -------------------------
+-- 7. RIDE
+-- -------------------------
+INSERT INTO ride (ride_id, user_id, bike_id, start_station_id, end_station_id, start_dock_id, end_dock_id, start_ts, end_ts, distance_km, ride_status) VALUES
+-- 2024 – storico
+(1,  1,  1,  1, 2,  1,  8,  '2024-04-10 08:05:00+02', '2024-04-10 08:34:00+02', 3.80, 'completed'),
+(2,  1,  2,  1, 3,  2,  15, '2024-06-22 17:30:00+02', '2024-06-22 17:58:00+02', 4.10, 'completed'),
+(3,  2,  5,  2, 1,  9,  3,  '2024-07-14 09:00:00+02', '2024-07-14 09:28:00+02', 3.70, 'completed'),
+(4,  3,  7,  3, 1,  13, 6,  '2024-08-03 07:45:00+02', '2024-08-03 08:10:00+02', 4.30, 'completed'),
+(5,  5,  12, 5, 4,  23, 19, '2024-09-18 18:20:00+02', '2024-09-18 18:55:00+02', 5.60, 'completed'),
+(6,  6,  14, 6, 7,  27, 32, '2024-10-07 08:10:00+02', '2024-10-07 08:45:00+02', 6.20, 'completed'),
+(7,  7,  18, 8, 1,  35, 4,  '2024-11-25 17:50:00+01', '2024-11-25 18:12:00+01', 2.90, 'completed'),
+(8,  9,  20, 9, 2,  40, 10, '2024-12-09 08:30:00+01', '2024-12-09 09:05:00+01', 5.10, 'completed'),
+-- 2025 – storico
+(9,  1,  3,  1, 7,  1,  33, '2025-02-14 08:00:00+01', '2025-02-14 08:38:00+01', 5.40, 'completed'),
+(10, 2,  6,  2, 6,  11, 28, '2025-03-22 09:10:00+01', '2025-03-22 09:42:00+01', 4.80, 'completed'),
+(11, 3,  8,  3, 8,  14, 36, '2025-04-05 07:55:00+02', '2025-04-05 08:20:00+02', 3.60, 'completed'),
+(12, 10, 22, 10,1,  43, 6,  '2025-05-17 08:15:00+02', '2025-05-17 08:50:00+02', 6.30, 'completed'),
+(13, 11, 19, 8, 4,  37, 18, '2025-06-28 17:40:00+02', '2025-06-28 18:05:00+02', 3.20, 'completed'),
+(14, 12, 4,  2, 9,  7,  39, '2025-07-11 09:00:00+02', '2025-07-11 09:50:00+02', 7.10, 'completed'),
+(15, 13, 16, 7, 3,  32, 13, '2025-08-20 18:30:00+02', '2025-08-20 19:05:00+02', 5.90, 'completed'),
+(16, 14, 10, 4, 6,  19, 30, '2025-09-09 08:00:00+02', '2025-09-09 08:35:00+02', 4.50, 'completed'),
+(17, 15, 21, 9, 1,  42, 2,  '2025-10-15 07:50:00+02', '2025-10-15 08:25:00+02', 5.20, 'completed'),
+(18, 1,  4,  1, 10, 4,  44, '2025-11-03 08:05:00+01', '2025-11-03 08:55:00+01', 7.80, 'completed'),
+(19, 5,  18, 8, 2,  35, 8,  '2025-12-01 17:30:00+01', '2025-12-01 17:58:00+01', 3.40, 'completed'),
+(20, 9,  23, 10,7,  45, 31, '2025-12-20 09:00:00+01', '2025-12-20 09:40:00+01', 6.70, 'completed'),
+-- 2026 – recenti
+(21, 1,  6,  2, 3,  11, 15, '2026-01-08 08:10:00+01', '2026-01-08 08:42:00+01', 4.60, 'completed'),
+(22, 2,  7,  3, 1,  16, 1,  '2026-01-14 09:05:00+01', '2026-01-14 09:30:00+01', 3.20, 'completed'),
+(23, 10, 16, 7, 2,  34, 10, '2026-01-28 07:45:00+01', '2026-01-28 08:25:00+01', 5.80, 'completed'),
+(24, 11, 12, 5, 1,  25, 3,  '2026-02-03 08:00:00+01', '2026-02-03 08:30:00+01', 4.10, 'completed'),
+(25, 13, 22, 10,4,  43, 21, '2026-02-10 17:20:00+01', '2026-02-10 17:55:00+01', 5.50, 'completed'),
+(26, 14, 14, 6, 8,  29, 36, '2026-02-17 08:30:00+01', '2026-02-17 08:52:00+01', 3.10, 'completed'),
+-- Cancellate
+(27, 4,  11, 4, NULL, 21, NULL, '2025-09-15 13:00:00+02', '2025-09-15 13:02:00+02', 0.00, 'cancelled'),
+(28, 8,  19, 8, NULL, 37, NULL, '2024-09-22 10:30:00+02', '2024-09-22 10:31:00+02', 0.00, 'cancelled'),
+-- In corso (oggi 25/02/2026)
+(29, 3,  24, 3, NULL, NULL, NULL, '2026-02-25 15:10:00+01', NULL, NULL, 'ongoing'),
+(30, 6,  25, 6, NULL, NULL, NULL, '2026-02-25 15:25:00+01', NULL, NULL, 'ongoing'),
+(31, 7,  26, 1, NULL, NULL, NULL, '2026-02-25 15:40:00+01', NULL, NULL, 'ongoing');
+
+
+-- -------------------------
+-- 8. PAYMENT
+-- -------------------------
+INSERT INTO payment (payment_id, user_id, plan_id, ride_id, station_id, payment_method, payment_status, amount, paid_at) VALUES
+-- Rinnovi abbonamento annuale – user 1
+(1,  1,  1,  NULL, 1, 'visa',          'paid',     89.99,  '2024-01-01 10:15:00+01'),
+(2,  1,  2,  NULL, 1, 'visa',          'paid',     89.99,  '2025-01-01 09:05:00+01'),
+(3,  1,  3,  NULL, 1, 'visa',          'paid',     94.99,  '2026-01-01 08:30:00+01'),
+-- Abbonamenti mensili – user 2
+(4,  2,  4,  NULL, 2, 'mastercard',    'paid',     9.99,   '2026-01-05 11:00:00+01'),
+(5,  2,  5,  NULL, 2, 'mastercard',    'paid',     9.99,   '2026-02-05 11:00:00+01'),
+-- Abbonamento annuale – user 5
+(6,  5,  8,  NULL, 5, 'paypal',        'paid',     94.99,  '2026-01-01 07:55:00+01'),
+-- Abbonamento mensile – user 6
+(7,  6,  9,  NULL, 6, 'visa',          'paid',     9.99,   '2026-02-01 12:10:00+01'),
+-- Abbonamento annuale scaduto – user 8
+(8,  8,  11, NULL, 2, 'bank_transfer', 'paid',     89.99,  '2024-06-01 09:00:00+02'),
+-- Abbonamento mensile – user 9
+(9,  9,  12, NULL, 1, 'mastercard',    'paid',     9.99,   '2026-02-01 08:00:00+01'),
+-- Abbonamento annuale – user 10
+(10, 10, 13, NULL, 1, 'visa',          'paid',     94.99,  '2026-01-01 09:40:00+01'),
+-- Abbonamento mensile – user 11
+(11, 11, 14, NULL, 2, 'mastercard',    'paid',     9.99,   '2026-02-01 10:00:00+01'),
+-- Abbonamento annuale – user 13
+(12, 13, 16, NULL, 1, 'paypal',        'paid',     94.99,  '2025-03-05 15:30:00+01'),
+-- Abbonamento mensile – user 14
+(13, 14, 17, NULL, 6, 'visa',          'paid',     9.99,   '2026-02-15 09:00:00+01'),
+-- Piano cancellato – user 4 (rejected)
+(14, 4,  7,  NULL, 4, 'maestro',       'rejected', 9.99,   '2025-09-01 08:45:00+02'),
+-- Pay-as-you-go rides – user 3
+(15, 3,  6,  4,   3, 'paypal',         'paid',     1.80,   '2024-08-03 08:12:00+02'),
+(16, 3,  6,  11,  3, 'paypal',         'paid',     2.10,   '2025-04-05 08:22:00+02'),
+(17, 3,  6,  29,  3, 'paypal',         'pending',  0.00,   '2026-02-25 15:10:00+01'),
+-- Pay-as-you-go rides – user 7
+(18, 7,  10, 7,   8, 'cash',           'paid',     1.50,   '2024-11-25 18:14:00+01'),
+(19, 7,  10, 26,  8, 'mastercard',     'paid',     2.20,   '2026-02-17 08:54:00+01'),
+-- Pay-as-you-go – user 12
+(20, 12, 15, 14,  2, 'visa',           'paid',     3.40,   '2025-07-11 09:52:00+02'),
+-- Pay-as-you-go – user 15
+(21, 15, 18, 17,  9, 'gift_card',      'paid',     2.60,   '2025-10-15 08:27:00+02'),
+-- Ride recenti pagate inline (piano annuale/mensile incluso, ma registrate)
+(22, 10, 13, 12,  10, 'visa',          'paid',     0.00,   '2025-05-17 08:52:00+02'),
+(23, 11, 14, 13,  8,  'mastercard',    'paid',     0.00,   '2025-06-28 18:07:00+02'),
+-- Rimborso
+(24, 6,  9,  NULL, 6, 'visa',          'refunded', 9.99,   '2026-02-20 14:00:00+01'),
+(25, 5,  8,  NULL, 5, 'paypal',        'paid',     94.99,  '2026-01-01 08:00:00+01');
+
+
+-- -------------------------
+-- 9. MAINTENANCE LOG
+-- -------------------------
+INSERT INTO maintenance_log (maintenance_id, bike_id, station_id, opened_ts, closed_ts, latitude_reported, longitude_reported, alert_type, maintenance_status, employee_name) VALUES
+-- Chiuse
+(1,  29, 1,  '2024-02-10 09:00:00+01', '2024-02-12 14:00:00+01', 45.464161,  9.190336, 'flat_tyre',          'closed',      'Mario Zanetti'),
+(2,  30, 2,  '2024-04-18 11:30:00+02', '2024-04-20 16:00:00+02', 45.485937,  9.204648, 'battery_failure',    'closed',      'Luisa Mancini'),
+(3,  27, 4,  '2025-01-22 08:00:00+01', '2025-01-25 10:30:00+01', 45.483569,  9.188056, 'battery_low',        'closed',      'Giovanni Serra'),
+(4,  28, 3,  '2025-03-14 15:00:00+01', '2025-03-16 09:00:00+01', 45.452278,  9.173990, 'brake_issue',        'closed',      'Anna Ferretti'),
+(5,  5,  2,  '2025-06-05 07:30:00+02', '2025-06-06 13:00:00+02', 45.485937,  9.204648, 'chain_broken',       'closed',      'Roberto Conti'),
+(6,  14, 6,  '2025-08-11 17:00:00+02', '2025-08-12 11:00:00+02', 45.474523,  9.213989, 'battery_low',        'closed',      'Silvia Negri'),
+(7,  22, 10, '2025-10-30 09:15:00+01', '2025-11-01 15:45:00+01', 45.497843,  9.209312, 'display_fault',      'closed',      'Marco Tosi'),
+(8,  1,  1,  '2025-12-03 08:00:00+01', '2025-12-04 12:30:00+01', 45.464161,  9.190336, 'flat_tyre',          'closed',      'Mario Zanetti'),
+-- In corso
+(9,  27, NULL, '2026-02-20 10:00:00+01', NULL, 45.483569, 9.188056, 'battery_failure',    'in_progress', 'Giovanni Serra'),
+(10, 28, 3,   '2026-02-22 14:30:00+01', NULL, 45.452278, 9.173990, 'brake_issue',        'in_progress', 'Anna Ferretti'),
+-- Aperte (segnalate, non ancora assegnate)
+(11, 25, NULL, '2026-02-25 14:55:00+01', NULL, 45.474523, 9.213989, 'battery_low',        'open',        NULL),
+(12, 26, NULL, '2026-02-25 15:41:00+01', NULL, 45.464161, 9.190336, 'unknown_error',      'open',        NULL);
