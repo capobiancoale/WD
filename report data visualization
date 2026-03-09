@@ -1,0 +1,786 @@
+---
+title: "Water Insecurity in the United States"
+subtitle: "A County-Level Analysis of Deprivation, Geographic Concentration, and Year-over-Year Change"
+author: "Francesco Pirovano, Elena La Chiusa, Alessio Capobianco"
+date: today
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-title: "Table of Contents"
+    toc-location: left
+    number-sections: true
+    embed-resources: true
+    code-fold: true
+    code-summary: "Show code"
+    code-line-numbers: true
+    fig-align: center
+    fig-width: 9
+    fig-height: 5.5
+    cap-location: bottom
+    df-print: kable
+execute:
+  warning: false
+  message: false
+  cache: false
+---
+
+```{r}
+#| label: init
+#| include: false
+
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+pkgs <- c("tidytuesdayR", "tidyverse", "scales",
+          "sf", "tigris",
+          "maps", "mapproj", "knitr", "broom",
+          "patchwork", "ggrepel")
+
+missing_pkgs <- pkgs[!vapply(pkgs, requireNamespace,
+                             logical(1), quietly = TRUE)]
+if (length(missing_pkgs)) {
+  install.packages(missing_pkgs, dependencies = TRUE)
+}
+
+invisible(lapply(pkgs, library, character.only = TRUE))
+
+options(tigris_use_cache = TRUE)
+
+theme_report <- function(base_size = 13) {
+  theme_minimal(base_size = base_size) %+replace%
+    theme(
+      plot.title         = element_text(face = "bold", size = base_size + 1,
+                                        margin = margin(b = 4)),
+      plot.subtitle      = element_text(color = "grey40", size = base_size - 1,
+                                        margin = margin(b = 8)),
+      plot.caption       = element_text(color = "grey55", size = 8,
+                                        hjust = 1, margin = margin(t = 8)),
+      axis.title         = element_text(size = base_size - 1, color = "grey30"),
+      panel.grid.minor   = element_blank(),
+      panel.grid.major.y = element_line(color = "grey92"),
+      panel.grid.major.x = element_line(color = "grey92"),
+      legend.title       = element_text(size = base_size - 1),
+      strip.text         = element_text(face = "bold")
+    )
+}
+
+theme_set(theme_report())
+
+SOURCE_CAPTION <- "Source: American Community Survey (ACS) 5-Year Estimates · TidyTuesday 2025"
+```
+
+---
+
+::: {.callout-note appearance="minimal"}
+## Executive Summary
+This report analyses county-level plumbing insecurity across all **50 U.S.
+states** using data from the American Community Survey (ACS) 5-Year Estimates
+for 2022 and 2023. Only non-state territories (Puerto Rico, Guam, etc.) are
+excluded. We find that plumbing deprivation is **highly concentrated** in
+Alaska, the rural Southwest, and tribal communities — with the top 10 counties
+exhibiting rates between 15% and 55%, compared to a national median below
+0.3%. A simple linear regression confirms that **county population size is a
+significant negative predictor** of deprivation rate. Year-over-year
+comparisons reveal that while most counties are stable, a subset experienced
+sharp changes — underscoring the fragility of progress in the absence of
+sustained infrastructure investment.
+:::
+
+---
+
+# Introduction
+
+## Background and Motivation
+
+Access to complete indoor plumbing — running water, a flush toilet, and a
+bathtub or shower — is one of the most fundamental markers of housing quality
+and public health. In a high-income nation like the United States, the
+persistence of plumbing insecurity may seem anomalous. Yet American Community
+Survey data consistently reveal that **hundreds of thousands of households**
+lack at least one of these basic facilities.
+
+::: {.callout-note}
+## Census definition of "lacking complete plumbing"
+The U.S. Census Bureau classifies a housing unit as lacking complete plumbing
+if it is missing **any** of the following: (1) hot and cold piped water,
+(2) a flush toilet, or (3) a bathtub or shower. The absence of even one
+element is sufficient to trigger the classification.
+:::
+
+Plumbing deprivation is not randomly distributed. It clusters along
+predictable fault lines: **geographic remoteness**, which drives up
+infrastructure costs; **poverty**, which constrains household and municipal
+investment; and **Indigenous land governance**, where federal infrastructure
+programmes have historically underperformed. Understanding the spatial and
+temporal structure of this inequality is a precondition for effective policy.
+
+## Research Questions
+
+This analysis is structured around four research questions:
+
+1. **Severity:** Which counties and states experience the highest rates of
+   plumbing insecurity in 2023?
+2. **Distribution:** How are deprivation rates distributed across all U.S.
+   counties — and how concentrated is the problem?
+3. **Predictors:** Is county population size associated with the deprivation
+   rate? What does a simple regression model reveal?
+4. **Trajectory:** Which counties improved or worsened most between 2022
+   and 2023, and what does this imply for policy durability?
+
+## Data
+
+The dataset originates from the **TidyTuesday** open data project (2025,
+Week 4) and is derived from the ACS 5-Year Estimates published by the
+U.S. Census Bureau. It contains county-level observations for the years
+2022 and 2023.
+
+| Variable | Type | Description |
+|---|---|---|
+| `geoid` | character | County FIPS code — unique geographic identifier |
+| `name` | character | County and state (e.g. *"Apache County, Arizona"*) |
+| `total_pop` | integer | Total county population |
+| `plumbing` | integer | Households lacking complete plumbing (count) |
+| `percent_lacking_plumbing` | double | Share of households lacking plumbing (%) |
+
+: Key variables in the ACS water insecurity dataset {#tbl-vars}
+
+---
+
+# Data Import and Preparation
+
+## Import
+
+```{r}
+#| label: load-data
+
+tuesdata <- tt_load(2025, week = 4)
+
+water_2022 <- tuesdata$water_insecurity_2022
+water_2023 <- tuesdata$water_insecurity_2023
+```
+
+## Cleaning and Feature Engineering
+
+```{r}
+#| label: clean-data
+#| code-fold: show
+
+# Only non-state territories excluded — AK and HI are included
+EXCLUDE_TERRITORIES <- c("Puerto Rico",
+                         "United States Virgin Islands", "Guam",
+                         "Commonwealth of the Northern Mariana Islands",
+                         "American Samoa")
+
+clean_water <- function(df) {
+  df |>
+    mutate(
+      rate   = percent_lacking_plumbing / 100,
+      state  = str_extract(name, "(?<=, ).+$"),
+      county = str_remove(name, ",.*$")
+    ) |>
+    filter(
+      !is.na(rate),
+      !is.na(total_pop),
+      total_pop > 0,
+      !state %in% EXCLUDE_TERRITORIES
+    )
+}
+
+water_2023_clean <- clean_water(water_2023)
+water_2022_clean <- clean_water(water_2022)
+```
+
+::: {.callout-tip}
+## Why use a function rather than repeating the pipeline?
+Wrapping the cleaning logic in `clean_water()` ensures that **identical
+transformations** are applied to both years, eliminating any risk of
+year-specific inconsistencies that would bias the 2022–2023 comparison.
+Geographic exclusions defined once in `EXCLUDE_TERRITORIES` propagate
+automatically to every downstream analysis. This is the *"Don't Repeat
+Yourself"* (DRY) principle.
+:::
+
+## Validation
+
+Before proceeding, we verify that `percent_lacking_plumbing / 100` and
+`plumbing / total_pop` are numerically consistent.
+
+```{r}
+#| label: tbl-validation
+#| tbl-cap: "Internal consistency check between the two rate derivations (2023 dataset)."
+
+water_2023_clean |>
+  mutate(check_rate = plumbing / total_pop) |>
+  summarise(
+    `N counties`  = n(),
+    `Max |diff|`  = max(abs(rate - check_rate), na.rm = TRUE),
+    `Mean |diff|` = mean(abs(rate - check_rate), na.rm = TRUE),
+    `Rate > 1`    = sum(rate > 1),
+    `Rate < 0`    = sum(rate < 0)
+  ) |>
+  kable(digits = 8)
+```
+
+The maximum absolute discrepancy is effectively zero (floating-point
+rounding only), confirming that the provided percentage and the computed
+rate are identical. No out-of-range values exist.
+
+---
+
+# Descriptive Statistics
+
+## National Overview
+
+```{r}
+#| label: tbl-summary
+#| tbl-cap: "Summary statistics for county-level plumbing deprivation rates — all 50 states (2023)."
+
+water_2023_clean |>
+  summarise(
+    `N counties`       = n(),
+    `Total population` = scales::comma(sum(total_pop)),
+    `Total lacking`    = scales::comma(sum(plumbing, na.rm = TRUE)),
+    `Nat. wtd. rate`   = scales::percent(
+                           sum(plumbing, na.rm = TRUE) / sum(total_pop),
+                           accuracy = 0.01),
+    `Min`              = scales::percent(min(rate),    accuracy = 0.01),
+    `Median`           = scales::percent(median(rate), accuracy = 0.01),
+    `Mean`             = scales::percent(mean(rate),   accuracy = 0.01),
+    `Max`              = scales::percent(max(rate),    accuracy = 0.01),
+    `Counties > 5%`    = sum(rate > 0.05),
+    `Counties > 10%`   = sum(rate > 0.10)
+  ) |>
+  kable()
+```
+
+::: {.callout-important}
+## Mean vs. weighted national rate
+The simple **mean** (`r scales::percent(mean(water_2023_clean$rate, na.rm=TRUE), accuracy=0.01)`)
+weights every county equally regardless of size. The **population-weighted
+rate** weights each county by its population — giving a more accurate picture
+of how many *people* are affected. The two figures differ because the most
+affected counties tend to be small in population.
+:::
+
+## Distribution of Deprivation Rates
+
+```{r}
+#| label: fig-distribution
+#| fig-cap: "Distribution of county-level plumbing deprivation rates — all 50 states (2023). The mean (red dashed) sits above the median (grey dotted) due to right skew driven by Alaska and tribal-land counties."
+#| fig-height: 4.5
+
+nat_avg <- mean(water_2023_clean$rate, na.rm = TRUE)
+nat_med <- median(water_2023_clean$rate, na.rm = TRUE)
+
+ggplot(water_2023_clean, aes(x = rate)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 bins = 50, fill = "#4575b4", color = "white", alpha = 0.8) +
+  geom_density(color = "#d73027", linewidth = 0.9) +
+  geom_vline(xintercept = nat_avg, linetype = "dashed",
+             color = "#d73027", linewidth = 0.9) +
+  geom_vline(xintercept = nat_med, linetype = "dotted",
+             color = "#555555", linewidth = 0.9) +
+  annotate("text", x = nat_avg + 0.002, y = Inf,
+           label = paste0("Mean\n", scales::percent(nat_avg, accuracy = 0.01)),
+           hjust = 0, vjust = 1.4, color = "#d73027", size = 3.4,
+           fontface = "bold") +
+  annotate("text", x = nat_med - 0.002, y = Inf,
+           label = paste0("Median\n", scales::percent(nat_med, accuracy = 0.01)),
+           hjust = 1, vjust = 1.4, color = "#555555", size = 3.4,
+           fontface = "bold") +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 0.1),
+                     breaks = seq(0, 0.6, by = 0.05)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  labs(
+    title    = "Distribution of Plumbing Deprivation Rates Across U.S. Counties (2023)",
+    subtitle = "Strongly right-skewed: national averages conceal severe outlier communities",
+    x = "Share of households lacking complete plumbing",
+    y = "Density",
+    caption = SOURCE_CAPTION
+  )
+```
+
+@fig-distribution reveals a **strongly right-skewed distribution**. The vast
+majority of counties
+(`r scales::percent(mean(water_2023_clean$rate < 0.02, na.rm=TRUE), accuracy=1)`)
+have rates below 2%, yet a persistent tail extends well beyond 20% and
+approaches 50% in extreme Alaskan and tribal-land cases. The mean exceeds
+the median by `r scales::percent(nat_avg - nat_med, accuracy = 0.01)`, a
+telltale signature of distributional skew.
+
+---
+
+# Results
+
+## Most Affected Counties
+
+```{r}
+#| label: top-counties-data
+
+top_counties <- water_2023_clean |>
+  arrange(desc(rate)) |>
+  slice_head(n = 10) |>
+  select(county, state, total_pop, plumbing, rate)
+```
+
+```{r}
+#| label: tbl-top10
+#| echo: false
+#| tbl-cap: "Top 10 U.S. counties by plumbing deprivation rate (2023)."
+
+top_counties |>
+  mutate(
+    total_pop = scales::comma(total_pop),
+    plumbing  = scales::comma(plumbing),
+    rate      = scales::percent(rate, accuracy = 0.01)
+  ) |>
+  kable(col.names = c("County", "State", "Total Pop.",
+                      "Households Lacking", "Rate (%)"),
+        align = c("l", "l", "r", "r", "r"))
+```
+
+```{r}
+#| label: fig-top10
+#| echo: false
+#| fig-cap: "Top 10 U.S. counties by plumbing deprivation rate (2023), colour-coded by severity."
+#| fig-height: 4.8
+
+top_counties |>
+  mutate(county = fct_reorder(county, rate)) |>
+  ggplot(aes(x = rate, y = county, fill = rate)) +
+  geom_col(width = 0.72) +
+  geom_text(aes(label = scales::percent(rate, accuracy = 0.1)),
+            hjust = -0.12, size = 3.5, color = "grey25", fontface = "bold") +
+  scale_fill_gradient(low = "#fdbb84", high = "#b30000",
+                      labels = scales::percent_format(), guide = "none") +
+  scale_x_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0, 0.18))) +
+  labs(
+    title    = "Top 10 Counties by Plumbing Deprivation (2023)",
+    subtitle = "Share of households lacking complete plumbing facilities",
+    x = "Deprivation rate", y = NULL,
+    caption = SOURCE_CAPTION
+  ) +
+  theme(panel.grid.major.y = element_blank())
+```
+
+As shown in @tbl-top10 and @fig-top10, the most severely affected counties
+are concentrated in **Alaska and Arizona**. Alaskan communities face
+prohibitive infrastructure costs due to permafrost and remoteness, while
+Arizona counties — particularly those overlapping the Navajo Nation — reflect
+decades of structural underinvestment in Indigenous infrastructure. The top
+county exceeds `r scales::percent(max(top_counties$rate), accuracy = 0.1)`,
+meaning more than half of its households lack at least one basic plumbing
+facility.
+
+## State-Level Analysis
+
+```{r}
+#| label: state-data
+
+state_summary <- water_2023_clean |>
+  group_by(state) |>
+  summarise(
+    n_counties    = n(),
+    total_pop     = sum(total_pop, na.rm = TRUE),
+    total_lacking = sum(plumbing,  na.rm = TRUE),
+    weighted_rate = total_lacking / total_pop,
+    mean_rate     = mean(rate,     na.rm = TRUE),
+    median_rate   = median(rate,   na.rm = TRUE),
+    max_rate      = max(rate,      na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(desc(weighted_rate))
+```
+
+```{r}
+#| label: fig-states
+#| echo: false
+#| fig-cap: "Top 15 states ranked by population-weighted plumbing insecurity (2023). Dot size encodes absolute scale; colour encodes severity."
+#| fig-height: 5.5
+
+state_summary |>
+  slice_head(n = 15) |>
+  ggplot(aes(x = weighted_rate, y = fct_reorder(state, weighted_rate),
+             size = total_lacking, color = weighted_rate)) +
+  geom_point(alpha = 0.88) +
+  geom_text(aes(label = scales::percent(weighted_rate, accuracy = 0.01)),
+            hjust = -0.5, size = 3.2, color = "grey30", fontface = "bold") +
+  scale_color_gradient(low = "#fee090", high = "#a50026",
+                       labels = scales::percent_format(), guide = "none") +
+  scale_size_continuous(range = c(3, 13),
+                        labels = scales::comma_format(),
+                        name   = "Households\nlacking plumbing") +
+  scale_x_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0, 0.25))) +
+  labs(
+    title    = "Top 15 States by Population-Weighted Plumbing Insecurity (2023)",
+    subtitle = "Weighted rate = Σ lacking / Σ population · removes bias from county size differences",
+    x = "Population-weighted deprivation rate", y = NULL,
+    caption = SOURCE_CAPTION
+  ) +
+  theme(panel.grid.major.y = element_blank())
+```
+
+::: {.callout-note}
+## Why population-weighted rates matter
+A simple average of county rates weights a county of 500 people equally
+to one of 500,000. The **population-weighted rate** — defined as
+$\sum_c \text{lacking}_c \;/\; \sum_c \text{pop}_c$ — accounts for
+this discrepancy and gives the share of the state's *total population*
+that lacks plumbing.
+:::
+
+## Regression: Population Size as a Predictor
+
+To quantify the relationship between county size and deprivation, we fit
+the following linear model:
+
+$$
+\operatorname{rate}_i = \alpha + \beta_1 \cdot \log_{10}(\operatorname{pop}_i) + \varepsilon_i, \quad \varepsilon_i \overset{iid}{\sim} \mathcal{N}(0,\,\sigma^2)
+$$ {#eq-model}
+
+The log-transformation of population is motivated by the right-skewed
+distribution of county sizes and by the expectation that the marginal
+effect of population on infrastructure access is decreasing.
+
+```{r}
+#| label: fit-model
+
+water_2023_clean <- water_2023_clean |>
+  mutate(log_pop = log10(total_pop))
+
+fit <- lm(rate ~ log_pop, data = water_2023_clean)
+```
+
+```{r}
+#| label: tbl-model
+#| echo: false
+#| tbl-cap: "OLS coefficient estimates for the model in @eq-model."
+
+tab <- broom::tidy(fit)
+tab$p.value <- formatC(tab$p.value, format = "e", digits = 2)
+kable(tab, digits = 5,
+      col.names = c("Term", "Estimate", "Std. Error",
+                    "t-statistic", "p-value"),
+      align = c("l", "r", "r", "r", "r"))
+```
+
+```{r}
+#| label: fig-scatter
+#| echo: false
+#| fig-cap: "Plumbing deprivation rate vs. log10(county population). The dark blue line is the OLS fit from @eq-model; the shaded band is the 95% confidence interval."
+#| fig-height: 5
+
+intercept_val <- round(coef(fit)[], 4)[1]
+slope_val     <- round(coef(fit)[], 4)[2]
+r2_val        <- round(summary(fit)$r.squared, 3)
+
+ggplot(water_2023_clean, aes(x = log_pop, y = rate)) +
+  geom_point(aes(color = rate), alpha = 0.4, size = 1.5) +
+  geom_smooth(method = "lm", formula = y ~ x,
+              color = "#1a3f6f", fill = "#aec7e8",
+              linewidth = 1.2, se = TRUE) +
+  scale_color_gradient(low = "#fdbb84", high = "#b30000",
+                       labels = scales::percent_format(),
+                       name   = "Deprivation\nrate") +
+  scale_x_continuous(
+    breaks = 3:7,
+    labels = c("1,000", "10,000", "100,000", "1M", "10M")
+  ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
+  labs(
+    title    = "Larger Counties Have Lower Plumbing Deprivation Rates",
+    subtitle = paste0("OLS: rate = ", intercept_val,
+                      " + ", slope_val,
+                      " x log10(pop)   |   R2 = ", r2_val),
+    x = "County population (log scale)",
+    y = "Deprivation rate",
+    caption = SOURCE_CAPTION
+  )
+```
+
+The estimated slope $\hat{\beta}_1 =$ `r round(coef(fit)[[2]], 4)` is
+negative and highly significant (p < 0.001), confirming that larger
+counties tend to have lower plumbing deprivation rates. The model in
+@eq-model explains R² = `r round(summary(fit)$r.squared, 3)` of the
+variance — a modest but meaningful share, consistent with population
+being one of several drivers alongside poverty, geography, and tribal
+land status.
+
+## Year-over-Year Change (2022–2023)
+
+```{r}
+#| label: change-data
+
+water_change <- water_2022_clean |>
+  select(geoid, rate_2022 = rate) |>
+  inner_join(
+    water_2023_clean |> select(geoid, county, state,
+                               rate_2023 = rate, total_pop),
+    by = "geoid"
+  ) |>
+  mutate(
+    change    = rate_2023 - rate_2022,
+    direction = if_else(change > 0, "Worsened", "Improved")
+  )
+```
+
+```{r}
+#| label: tbl-change-summary
+#| tbl-cap: "Summary of county-level change in plumbing deprivation rate between 2022 and 2023."
+
+water_change |>
+  summarise(
+    `Matched counties`  = n(),
+    `Improved`          = sum(direction == "Improved"),
+    `Worsened`          = sum(direction == "Worsened"),
+    `No change`         = sum(change == 0),
+    `Mean delta`        = scales::percent(mean(change),   accuracy = 0.001),
+    `Median delta`      = scales::percent(median(change), accuracy = 0.001),
+    `Max improvement`   = scales::percent(min(change),    accuracy = 0.01),
+    `Max deterioration` = scales::percent(max(change),    accuracy = 0.01)
+  ) |>
+  kable()
+```
+
+```{r}
+#| label: fig-change
+#| echo: false
+#| fig-cap: "Left: 5 most-improved and 5 most-worsened counties (2022–2023). Right: scatter of 2022 vs. 2023 rates — points above the diagonal worsened."
+#| fig-height: 5.5
+
+top_changed <- bind_rows(
+  water_change |> arrange(change)       |> slice_head(n = 5),
+  water_change |> arrange(desc(change)) |> slice_head(n = 5)
+)
+
+p_bar <- top_changed |>
+  ggplot(aes(x = change, y = fct_reorder(county, change),
+             fill = direction)) +
+  geom_col(width = 0.72) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_text(aes(
+    label = scales::percent(change, accuracy = 0.01),
+    hjust = if_else(change < 0, 1.12, -0.12)
+  ), size = 3.2, color = "grey20") +
+  scale_fill_manual(values = c("Improved" = "#2166ac",
+                               "Worsened" = "#d6604d"),
+                    guide = "none") +
+  scale_x_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0.22, 0.22))) +
+  labs(title = "Largest Changes (2022–2023)",
+       x = "Change in rate (pp)", y = NULL) +
+  theme(panel.grid.major.y = element_blank())
+
+p_scatter <- water_change |>
+  ggplot(aes(x = rate_2022, y = rate_2023)) +
+  geom_abline(slope = 1, intercept = 0,
+              linetype = "dashed", color = "grey50") +
+  geom_point(aes(color = change), alpha = 0.45, size = 1.2) +
+  ggrepel::geom_label_repel(
+    data = top_changed,
+    aes(label = county),
+    size = 2.5, max.overlaps = 10, box.padding = 0.3
+  ) +
+  scale_color_gradient2(low = "#2166ac", mid = "grey80",
+                        high = "#d6604d", midpoint = 0,
+                        labels = scales::percent_format(),
+                        name = "delta rate") +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 0.1)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
+  labs(title = "2022 vs. 2023 Rates",
+       x = "Rate 2022", y = "Rate 2023")
+
+p_bar + p_scatter +
+  plot_annotation(
+    caption = SOURCE_CAPTION,
+    theme = theme(plot.caption = element_text(color = "grey55",
+                                              size = 8, hjust = 1))
+  )
+```
+
+As shown in @fig-change, `r sum(water_change$direction == "Improved")`
+counties improved and `r sum(water_change$direction == "Worsened")` worsened
+between 2022 and 2023. Most counties cluster tightly around the diagonal
+(no change), while labelled outliers experienced changes exceeding 5
+percentage points in a single year — more plausibly reflecting **survey
+sampling variance** in small counties than genuine infrastructure change.
+
+## Geographic Overview
+
+```{r}
+#| label: fig-map
+#| echo: false
+#| fig-cap: "County-level plumbing insecurity across all 50 U.S. states (2023). Each dot is a county; colour = deprivation rate; size = households affected. Alaska and Hawaii are shown as insets via tigris::shift_geometry(). Black rings identify the 10 worst counties."
+#| fig-width: 11
+#| fig-height: 6.2
+
+# 1. County geometries — all 50 states
+counties_sf <- tigris::counties(cb = TRUE, year = 2023,
+                                progress_bar = FALSE) |>
+  sf::st_transform(crs = 4326)
+
+# 2. State outlines — 50 states only (no territories)
+states_sf <- tigris::states(cb = TRUE, year = 2023,
+                            progress_bar = FALSE) |>
+  filter(!STUSPS %in% c("PR", "VI", "GU", "MP", "AS")) |>
+  sf::st_transform(crs = 4326)
+
+# 3. Attach ACS data to county geometries
+water_sf <- counties_sf |>
+  inner_join(
+    water_2023_clean |> select(geoid, rate, plumbing, county, state),
+    by = c("GEOID" = "geoid")
+  )
+
+# 4. shift_geometry() repositions AK and HI as insets
+water_sf_shifted  <- tigris::shift_geometry(water_sf)
+states_sf_shifted <- tigris::shift_geometry(states_sf)
+
+# 5. Compute centroids AFTER shift
+suppressWarnings({
+  centroids_shifted <- water_sf_shifted |>
+    sf::st_centroid() |>
+    mutate(
+      lon = sf::st_coordinates(geometry)[, 1],
+      lat = sf::st_coordinates(geometry)[, 2]
+    ) |>
+    sf::st_drop_geometry() |>
+    as_tibble()
+})
+
+top10_shifted <- centroids_shifted |> slice_max(order_by = rate, n = 10)
+
+# 6. Plot
+ggplot() +
+  geom_sf(data = states_sf_shifted,
+          fill = "grey94", color = "white", linewidth = 0.35) +
+  geom_point(data = centroids_shifted,
+             aes(x = lon, y = lat, color = rate, size = plumbing),
+             alpha = 0.6) +
+  geom_point(data = top10_shifted,
+             aes(x = lon, y = lat),
+             shape = 21, color = "black", fill = NA,
+             size = 6, stroke = 1.1) +
+  ggrepel::geom_label_repel(
+    data = top10_shifted,
+    aes(x = lon, y = lat, label = county),
+    size = 2.4, box.padding = 0.4,
+    max.overlaps = 20, segment.color = "grey40"
+  ) +
+  scale_color_gradient(low = "#ffffcc", high = "#800026",
+                       labels = scales::percent_format(),
+                       name = "Deprivation\nrate") +
+  scale_size_continuous(range = c(0.4, 7),
+                        labels = scales::comma_format(),
+                        name = "Households\naffected") +
+  coord_sf() +
+  labs(
+    title    = "Plumbing Insecurity Across All 50 U.S. States (2023)",
+    subtitle = "Each dot = one county · Ringed & labelled = top 10 worst · Alaska & Hawaii shown as insets",
+    caption  = SOURCE_CAPTION
+  ) +
+  theme_void(base_size = 13) +
+  theme(
+    plot.title      = element_text(face = "bold", hjust = 0.5,
+                                   margin = margin(b = 4)),
+    plot.subtitle   = element_text(color = "grey40", hjust = 0.5,
+                                   size = 10),
+    plot.caption    = element_text(color = "grey55", size = 8, hjust = 1),
+    legend.position = "right"
+  )
+```
+
+@fig-map makes the geographic story immediately legible. The continental
+United States is overwhelmingly light-coloured, confirming that most counties
+have near-universal plumbing access. The Alaska inset reveals a dense cluster
+of severely affected remote communities, while the Southwest — predominantly
+on or near Navajo and other tribal lands — stands out as the other major
+structural outlier.
+
+---
+
+# Discussion
+
+## Synthesis of Findings
+
+The four analytical lenses applied in this report converge on a coherent
+narrative. Plumbing insecurity in the United States is not a diffuse
+national problem but a **sharply localised one**, concentrated in:
+
+- Remote Alaskan communities where permafrost and distance make piped
+  infrastructure prohibitively expensive
+- Tribal lands in the Southwest — particularly the Navajo Nation — where
+  federal infrastructure programmes have chronically underdelivered
+- Pockets of the rural South where poverty and ageing housing stock
+  combine to produce persistent deprivation
+
+The regression analysis (@tbl-model) confirms that **population size is a
+significant negative predictor** of deprivation: each tenfold increase in
+county population is associated with a
+`r abs(round(coef(fit)[[2]] * 100, 2))` percentage-point reduction in the
+deprivation rate. Yet the low R² = `r round(summary(fit)$r.squared, 3)`
+signals that population alone is far from the complete story — unobserved
+factors (tribal status, poverty rate, climate, housing age) account for
+most of the remaining variation.
+
+## Limitations
+
+::: {.callout-caution}
+## Key limitations of this analysis
+
+- **ACS sampling variance:** In small counties, the 5-year ACS estimate
+  carries wide margins of error not incorporated here. Some extreme values
+  and year-over-year volatility may reflect survey noise rather than true
+  change.
+- **Ecological fallacy:** All inferences are at the county level.
+  Individual-level determinants of plumbing insecurity cannot be identified
+  from these data.
+- **Omitted variable bias:** The regression includes only population size.
+  Poverty rate, tribal land status, housing age, and remoteness indices
+  are all known correlates that would substantially improve model fit and
+  reduce confounding.
+- **Temporal aggregation:** ACS 5-year estimates pool 2019–2023 observations.
+  "2023" data therefore reflect conditions over a five-year window, not a
+  single point in time.
+- **Territorial exclusion:** U.S. territories (Puerto Rico, Guam, etc.) are
+  excluded from all analyses due to data availability constraints.
+:::
+
+---
+
+# Conclusions
+
+This report has demonstrated that plumbing insecurity in the United States
+is a **geographically concentrated, structurally determined** phenomenon
+that resists reduction to national averages. Four conclusions follow
+directly from the data:
+
+1. **Concentration demands targeted policy.** The problem is acute in a
+   small number of communities — particularly in Alaska and on tribal lands.
+   Universal programmes will be inefficient; place-based, needs-targeted
+   investment is more appropriate.
+
+2. **Population-weighted metrics must complement county-level rates.**
+   A simple state average is distorted by the number and size of counties;
+   only a population-weighted rate gives an accurate picture of the
+   aggregate human burden.
+
+3. **Progress is possible but fragile.** The year-over-year data show
+   meaningful change in both directions. Without sustained infrastructure
+   investment — not one-time transfers — gains in the most vulnerable
+   counties are liable to erode.
+
+4. **Water insecurity is a proxy for structural inequality.** The geographic
+   overlap between high deprivation rates and Indigenous land governance,
+   rural poverty, and historical disinvestment is not coincidental.
+   Addressing plumbing insecurity ultimately requires engagement with these
+   underlying structural determinants.
+
+---
+
+*Report generated on `r format(Sys.Date(), "%B %d, %Y")` with
+R `r paste(R.version$major, R.version$minor, sep = ".")`.
+All code is embedded and fully reproducible.*
