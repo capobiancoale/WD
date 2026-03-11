@@ -19,7 +19,9 @@ FROM payment p
 LEFT JOIN subscription_plan sp 
        ON p.plan_id = sp.plan_id
 GROUP BY month, membership_type
-ORDER BY month, membership_type;
+ORDER BY month,
+         total_revenue DESC;
+
 
 ---3
 SELECT
