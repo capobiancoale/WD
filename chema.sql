@@ -45,12 +45,12 @@ CREATE TABLE client (
 
 -- =========================
 -- 2. SUBSCRIPTION PLAN
--- Piano + istanza utente (user_subscription rimossa)
+-- Plan + user instance (user_subscription removed)
 -- =========================
 CREATE TABLE subscription_plan (
   plan_id     INTEGER       PRIMARY KEY,
 
-  -- ✅ Collegamento diretto a client
+  -- ✅ Direct connection to client
   user_id     INTEGER       NOT NULL,
 
   plan_type   VARCHAR(20)   NOT NULL
@@ -59,14 +59,14 @@ CREATE TABLE subscription_plan (
   price       NUMERIC(10,2) NOT NULL
     CHECK (price >= 0),
 
-  -- Durata in giorni (NULL = pay_as_you_go)
+  -- Duration in days (NULL = pay_as_you_go)
   length_days INTEGER
     CHECK (length_days IS NULL OR length_days > 0),
 
   start_date  DATE          NOT NULL,
   end_date    DATE,
 
-  -- ✅ Status aggiunto
+  -- ✅ Status added
   status      VARCHAR(20)   NOT NULL DEFAULT 'active'
     CHECK (status IN ('active','cancelled','suspended','expired')),
 
@@ -87,7 +87,7 @@ CREATE TABLE station (
 
 -- =========================
 -- 4. PLAN STATION ACCESS
--- Tabella ponte subscription_plan ↔ station
+-- Bridge table subscription_plan ↔ station
 -- =========================
 CREATE TABLE plan_station_access (
   plan_id    INTEGER NOT NULL,
@@ -180,21 +180,21 @@ WHERE ride_status = 'ongoing';
 
 -- =========================
 -- 8. PAYMENT
--- ✅ Collegamento diretto a client via user_id
+-- ✅ Direct connection to client via user_id
 -- =========================
 CREATE TABLE payment (
   payment_id     INTEGER       PRIMARY KEY,
 
-  -- ✅ Collegamento diretto a client
+  -- ✅ Direct connection to client
   user_id        INTEGER       NOT NULL,
 
-  -- Collegamento al piano dell'utente
+  -- Connection to the user's plan
   plan_id        INTEGER,
 
-  -- Solo per pay_as_you_go
+  -- Only for pay_as_you_go
   ride_id        INTEGER,
 
-  -- Stazione dove è avvenuto il pagamento
+  -- Station where payment occurred
   station_id     INTEGER,
 
   payment_method VARCHAR(80)   NOT NULL
