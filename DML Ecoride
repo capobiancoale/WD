@@ -128,7 +128,7 @@ INSERT INTO subscription_plan (plan_id,user_id,plan_type,price,length_days,start
 
 -- 3. STATION  (unchanged – same 10 Milan stops)
 
-INSERT INTO station (station_id, latitude_station, longitude_station) VALUES
+INSERT INTO station (station_id, station_latitude, station_longitude) VALUES
 (1,  45.464161,  9.190336),   -- Duomo
 (2,  45.485937,  9.204648),   -- Centrale
 (3,  45.452278,  9.173990),   -- Navigli / Porta Genova
@@ -653,7 +653,7 @@ INSERT INTO bike (bike_id, type, status, battery_level, station_id, dock_id) VAL
 
 -- 7. RIDE  (85 rides: 75 completed, 5 cancelled, 5 ongoing)
 
-INSERT INTO ride (ride_id,user_id,bike_id,start_station_id,end_station_id,start_dock_id,end_dock_id,start_ts,end_ts,distance_km,ride_status) VALUES
+INSERT INTO ride (ride_id,user_id,bike_id,start_station_id,end_station_id,start_dock_id,end_dock_id,start_timestamp,end_timestamp,distance_km,ride_status) VALUES
 (1,1,1,1,2,1,6,'2024-04-10 08:05:00+02','2024-04-10 08:37:00+02',3.8,'completed'),
 (2,2,5,2,1,6,3,'2024-04-15 09:00:00+02','2024-04-15 09:28:00+02',3.7,'completed'),
 (3,3,7,3,1,11,1,'2024-05-02 07:45:00+02','2024-05-02 08:10:00+02',4.3,'completed'),
@@ -815,7 +815,7 @@ INSERT INTO payment (payment_id,user_id,plan_id,ride_id,station_id,payment_metho
 
 -- 9. MAINTENANCE_LOG
 
-INSERT INTO maintenance_log (maintenance_id,bike_id,station_id,opened_ts,closed_ts,latitude_reported,longitude_reported,alert_type,maintenance_status,employee_name) VALUES
+INSERT INTO maintenance_log (maintenance_id,bike_id,station_id,opened_timestamp,closed_timestamp,latitude_reported,longitude_reported,alert_type,maintenance_status,employee_name) VALUES
 (1, 49,1, '2024-02-10 09:00:00+01','2024-02-12 14:00:00+01',45.464161,9.190336,'flat_tyre','closed','Mario Zanetti'),
 (2, 50,2, '2024-04-18 11:30:00+02','2024-04-20 16:00:00+02',45.485937,9.204648,'battery_failure','closed','Luisa Mancini'),
 (3,  5,2, '2025-01-22 08:00:00+01','2025-01-25 10:30:00+01',45.485937,9.204648,'battery_low','closed','Giovanni Serra'),
