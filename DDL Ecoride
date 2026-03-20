@@ -64,7 +64,7 @@ CREATE TABLE subscription_plan (
 
   -- Status aggiunto
   status      VARCHAR(20)   NOT NULL DEFAULT 'active'
-    CHECK (status IN ('active','cancelled','suspended','expired')),
+    CHECK (status IN ('active','cancelled','suspended','expired')), 
 
   FOREIGN KEY (user_id) REFERENCES client(user_id) ON DELETE CASCADE,
   CHECK (end_date IS NULL OR end_date >= start_date)
@@ -188,7 +188,7 @@ CREATE TABLE payment (
   station_id     INTEGER,
 
   payment_method VARCHAR(80)   NOT NULL
-    CHECK (payment_method IN ('visa','mastercard','gift_card','maestro','paypal','bank_transfer')),
+    CHECK (payment_method IN ('card','paypal','gift_card')),
 
   payment_status VARCHAR(20)   NOT NULL
     CHECK (payment_status IN ('pending','paid','failed','rejected','refunded')),
