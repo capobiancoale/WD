@@ -50,7 +50,7 @@ INSERT INTO subscription_plan (plan_id, user_id, plan_type, price, length_days, 
 -- -------------------------
 -- 3. STATION
 -- -------------------------
-INSERT INTO station (station_id, latitude_station, longitude_station) VALUES
+INSERT INTO station (station_id, station_latitude, station_longitude) VALUES
 (1,  45.464161,  9.190336),   -- Milano Duomo
 (2,  45.485937,  9.204648),   -- Milano Centrale
 (3,  45.452278,  9.173990),   -- Navigli / Porta Genova
@@ -204,7 +204,7 @@ INSERT INTO bike (bike_id, type, status, battery_level, station_id, dock_id) VAL
 -- -------------------------
 -- 7. RIDE
 -- -------------------------
-INSERT INTO ride (ride_id, user_id, bike_id, start_station_id, end_station_id, start_dock_id, end_dock_id, start_ts, end_ts, distance_km, ride_status) VALUES
+INSERT INTO ride (ride_id, user_id, bike_id, start_station_id, end_station_id, start_dock_id, end_dock_id, start_timestamp, end_timestamp, distance_km, ride_status) VALUES
 -- 2024 – storico
 (1,  1,  1,  1, 2,  1,  8,  '2024-04-10 08:05:00+02', '2024-04-10 08:34:00+02', 3.80, 'completed'),
 (2,  1,  2,  1, 3,  2,  15, '2024-06-22 17:30:00+02', '2024-06-22 17:58:00+02', 4.10, 'completed'),
@@ -294,7 +294,7 @@ INSERT INTO payment (payment_id, user_id, plan_id, ride_id, station_id, payment_
 -- -------------------------
 -- 9. MAINTENANCE LOG
 -- -------------------------
-INSERT INTO maintenance_log (maintenance_id, bike_id, station_id, opened_ts, closed_ts, latitude_reported, longitude_reported, alert_type, maintenance_status, employee_name) VALUES
+INSERT INTO maintenance_log (maintenance_id, bike_id, station_id, opened_timestamp, closed_timestamp, latitude_reported, longitude_reported, alert_type, maintenance_status, employee_name) VALUES
 -- Chiuse
 (1,  29, 1,  '2024-02-10 09:00:00+01', '2024-02-12 14:00:00+01', 45.464161,  9.190336, 'flat_tyre',          'closed',      'Mario Zanetti'),
 (2,  30, 2,  '2024-04-18 11:30:00+02', '2024-04-20 16:00:00+02', 45.485937,  9.204648, 'battery_failure',    'closed',      'Luisa Mancini'),

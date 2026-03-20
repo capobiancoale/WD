@@ -80,8 +80,8 @@ CREATE TABLE subscription_plan (
 -- =========================
 CREATE TABLE station (
   station_id        INTEGER      PRIMARY KEY,
-  latitude_station  NUMERIC(9,6) NOT NULL CHECK (latitude_station  BETWEEN -90  AND 90),
-  longitude_station NUMERIC(9,6) NOT NULL CHECK (longitude_station BETWEEN -180 AND 180)
+  station_latitude  NUMERIC(9,6) NOT NULL CHECK (station_latitude  BETWEEN -90  AND 90),
+  station_longitude NUMERIC(9,6) NOT NULL CHECK (station_longitude BETWEEN -180 AND 180)
 );
 
 
@@ -155,8 +155,8 @@ CREATE TABLE ride (
   start_dock_id    INTEGER,
   end_dock_id      INTEGER,
 
-  start_ts         TIMESTAMPTZ   NOT NULL DEFAULT now(),
-  end_ts           TIMESTAMPTZ,
+  start_timestamp  TIMESTAMPTZ   NOT NULL DEFAULT now(),
+  end_timestamp    TIMESTAMPTZ,
 
   distance_km      NUMERIC(10,2) CHECK (distance_km IS NULL OR distance_km >= 0),
 
@@ -169,7 +169,7 @@ CREATE TABLE ride (
   FOREIGN KEY (start_dock_id)    REFERENCES dock(dock_id),
   FOREIGN KEY (end_dock_id)      REFERENCES dock(dock_id),
 
-  CHECK (end_ts IS NULL OR end_ts >= start_ts)
+  CHECK (end_timestamp IS NULL OR end_timestamp >= start_timestamp)
 );
 
 -- Only one ongoing ride per bike
@@ -221,8 +221,8 @@ CREATE TABLE maintenance_log (
   bike_id            INTEGER            NOT NULL,
   station_id         INTEGER,
 
-  opened_ts          TIMESTAMPTZ        NOT NULL DEFAULT now(),
-  closed_ts          TIMESTAMPTZ,
+  opened_timestamp   TIMESTAMPTZ        NOT NULL DEFAULT now(),
+  closed_timestamp   TIMESTAMPTZ,
 
   latitude_reported  NUMERIC(9,6)       NOT NULL CHECK (latitude_reported  BETWEEN -90  AND 90),
   longitude_reported NUMERIC(9,6)       NOT NULL CHECK (longitude_reported BETWEEN -180 AND 180),
@@ -234,7 +234,7 @@ CREATE TABLE maintenance_log (
   FOREIGN KEY (bike_id)    REFERENCES bike(bike_id),
   FOREIGN KEY (station_id) REFERENCES station(station_id),
 
-  CHECK (closed_ts IS NULL OR closed_ts >= opened_ts)
+  CHECK (closed_timestamp IS NULL OR closed_timestamp >= opened_timestamp)
 );
 
 
@@ -276,11 +276,11 @@ CREATE INDEX idx_ride_user_id                 ON ride(user_id);
 CREATE INDEX idx_ride_bike_id                 ON ride(bike_id);
 CREATE INDEX idx_ride_start_station_id        ON ride(start_station_id);
 CREATE INDEX idx_ride_end_station_id          ON ride(end_station_id);
-CREATE INDEX idx_ride_start_ts                ON ride(start_ts);
+CREATE INDEX idx_ride_start_timestamp          ON ride(start_timestamp);
 CREATE INDEX idx_ride_status                  ON ride(ride_status);
 
 -- maintenance_log
 CREATE INDEX idx_maintenance_bike_id          ON maintenance_log(bike_id);
 CREATE INDEX idx_maintenance_station_id       ON maintenance_log(station_id);
 CREATE INDEX idx_maintenance_status           ON maintenance_log(maintenance_status);
-CREATE INDEX idx_maintenance_opened_ts        ON maintenance_log(opened_ts);
+CREATE INDEX idx_maintenance_opened_timestamp  ON maintenance_log(opened_timestamp);
