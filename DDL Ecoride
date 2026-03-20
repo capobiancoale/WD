@@ -188,7 +188,7 @@ CREATE TABLE payment (
   station_id     INTEGER,
 
   payment_method VARCHAR(80)   NOT NULL
-    CHECK (payment_method IN ('visa','mastercard','gift_card','maestro','paypal','bank_transfer','cash')),
+    CHECK (payment_method IN ('visa','mastercard','gift_card','maestro','paypal','bank_transfer')),
 
   payment_status VARCHAR(20)   NOT NULL
     CHECK (payment_status IN ('pending','paid','failed','rejected','refunded')),
