@@ -210,8 +210,8 @@ CREATE TABLE maintenance_log (
   bike_id            INTEGER            NOT NULL,
   station_id         INTEGER,
 
-  opened_ts          TIMESTAMPTZ        NOT NULL DEFAULT now(),
-  closed_ts          TIMESTAMPTZ,
+  opened_ts          TIMESTAMP        NOT NULL DEFAULT now(),
+  closed_ts          TIMESTAMP,
 
   latitude_reported  NUMERIC(9,6)       NOT NULL CHECK (latitude_reported  BETWEEN -90  AND 90),
   longitude_reported NUMERIC(9,6)       NOT NULL CHECK (longitude_reported BETWEEN -180 AND 180),
