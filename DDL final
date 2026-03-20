@@ -1,0 +1,201 @@
+-- DDL ECORIDE
+
+-- DROP TABLES (rerunnable)
+
+DROP TABLE IF EXISTS maintenance_log CASCADE;
+DROP TABLE IF EXISTS ride CASCADE;
+DROP TABLE IF EXISTS bike CASCADE;
+DROP TABLE IF EXISTS dock CASCADE;
+DROP TABLE IF EXISTS plan_station_access CASCADE;
+DROP TABLE IF EXISTS station CASCADE;
+DROP TABLE IF EXISTS payment CASCADE;
+DROP TABLE IF EXISTS subscription_plan CASCADE;
+DROP TABLE IF EXISTS client CASCADE;
+
+-- Drop ENUMs on full reset
+DROP TYPE IF EXISTS user_status CASCADE;
+DROP TYPE IF EXISTS bike_type CASCADE;
+DROP TYPE IF EXISTS bike_status CASCADE;
+DROP TYPE IF EXISTS ride_status CASCADE;
+DROP TYPE IF EXISTS maintenance_status CASCADE;
+
+-- ENUM TYPES
+CREATE TYPE user_status        AS ENUM ('active','inactive');
+CREATE TYPE bike_type          AS ENUM ('STANDARD','ELECTRIC');
+CREATE TYPE bike_status        AS ENUM ('available','in_ride','maintenance','decommissioned');
+CREATE TYPE ride_status        AS ENUM ('ongoing','completed','cancelled');
+CREATE TYPE maintenance_status AS ENUM ('open','in_progress','closed');
+
+-- 1. CLIENT
+CREATE TABLE client (
+  user_id            INTEGER       PRIMARY KEY,
+  first_name         VARCHAR(80)   NOT NULL,
+  last_name          VARCHAR(80)   NOT NULL,
+  email              VARCHAR(255)  NOT NULL UNIQUE,
+  phone              VARCHAR(30)   UNIQUE,
+  registration_date  TIMESTAMPTZ   NOT NULL DEFAULT now(),
+  status             user_status   NOT NULL DEFAULT 'active'
+);
+
+-- 2. SUBSCRIPTION PLAN
+CREATE TABLE subscription_plan (
+  plan_id      INTEGER       PRIMARY KEY,
+  user_id      INTEGER       NOT NULL,
+  plan_type    VARCHAR(20)   NOT NULL
+    CHECK (plan_type IN ('annual','monthly','pay_as_you_go')),
+  price        NUMERIC(10,2) NOT NULL
+    CHECK (price >= 0),
+  length_days  INTEGER
+    CHECK (length_days IS NULL OR length_days > 0),
+  start_date   DATE          NOT NULL,
+  end_date     DATE,
+  status       VARCHAR(20)   NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active','cancelled','suspended','expired')),
+  FOREIGN KEY (user_id) REFERENCES client(user_id) ON DELETE CASCADE,
+  CHECK (end_date IS NULL OR end_date >= start_date)
+);
+
+-- 3. STATION
+CREATE TABLE station (
+  station_id         INTEGER      PRIMARY KEY,
+  latitude_station   NUMERIC(9,6) NOT NULL CHECK (latitude_station  BETWEEN -90  AND 90),
+  longitude_station  NUMERIC(9,6) NOT NULL CHECK (longitude_station BETWEEN -180 AND 180)
+);
+
+-- 4. PLAN STATION ACCESS
+-- Bridge table subscription_plan ↔ station
+CREATE TABLE plan_station_access (
+  plan_id     INTEGER NOT NULL,
+  station_id  INTEGER NOT NULL,
+  PRIMARY KEY (plan_id, station_id),
+  FOREIGN KEY (plan_id)    REFERENCES subscription_plan(plan_id) ON DELETE CASCADE,
+  FOREIGN KEY (station_id) REFERENCES station(station_id)        ON DELETE CASCADE
+);
+
+-- 5. DOCK
+CREATE TABLE dock (
+  dock_id      INTEGER     PRIMARY KEY,
+  station_id   INTEGER     NOT NULL,
+  dock_number  INTEGER     NOT NULL CHECK (dock_number > 0),
+  dock_status  VARCHAR(80) NOT NULL
+    CHECK (dock_status IN ('available','occupied','out_of_order')),
+  FOREIGN KEY (station_id) REFERENCES station(station_id) ON DELETE CASCADE,
+  UNIQUE (station_id, dock_number)
+);
+
+-- 6. BIKE
+CREATE TABLE bike (
+  bike_id        INTEGER     PRIMARY KEY,
+  type           bike_type   NOT NULL,
+  status         bike_status NOT NULL DEFAULT 'available',
+  battery_level  INTEGER,
+  station_id     INTEGER,
+  dock_id        INTEGER,
+  FOREIGN KEY (station_id) REFERENCES station(station_id) ON DELETE SET NULL,
+  FOREIGN KEY (dock_id)    REFERENCES dock(dock_id)       ON DELETE SET NULL,
+  CHECK (
+    (type = 'ELECTRIC' AND battery_level BETWEEN 0 AND 100)
+    OR
+    (type = 'STANDARD' AND battery_level IS NULL)
+  ),
+  CHECK (dock_id IS NULL OR station_id IS NOT NULL)
+);
+
+-- 7. RIDE
+CREATE TABLE ride (
+  ride_id          INTEGER       PRIMARY KEY,
+  user_id          INTEGER       NOT NULL,
+  bike_id          INTEGER       NOT NULL,
+  start_station_id INTEGER       NOT NULL,
+  end_station_id   INTEGER,
+  start_dock_id    INTEGER,
+  end_dock_id      INTEGER,
+  start_ts         TIMESTAMPTZ   NOT NULL DEFAULT now(),
+  end_ts           TIMESTAMPTZ,
+  distance_km      NUMERIC(10,2) CHECK (distance_km IS NULL OR distance_km >= 0),
+  ride_status      ride_status   NOT NULL DEFAULT 'ongoing',
+  FOREIGN KEY (user_id)          REFERENCES client(user_id),
+  FOREIGN KEY (bike_id)          REFERENCES bike(bike_id),
+  FOREIGN KEY (start_station_id) REFERENCES station(station_id),
+  FOREIGN KEY (end_station_id)   REFERENCES station(station_id),
+  FOREIGN KEY (start_dock_id)    REFERENCES dock(dock_id),
+  FOREIGN KEY (end_dock_id)      REFERENCES dock(dock_id),
+  CHECK (end_ts IS NULL OR end_ts >= start_ts)
+);
+
+-- Only one ongoing ride per bike
+CREATE UNIQUE INDEX ux_ride_one_ongoing_per_bike
+ON ride(bike_id)
+WHERE ride_status = 'ongoing';
+
+-- 8. PAYMENT
+CREATE TABLE payment (
+  payment_id     INTEGER       PRIMARY KEY,
+  user_id        INTEGER       NOT NULL,
+  plan_id        INTEGER,
+  ride_id        INTEGER,
+  station_id     INTEGER,
+  payment_method VARCHAR(80)   NOT NULL
+    CHECK (payment_method IN ('card','paypal','gift_card')),
+  payment_status VARCHAR(20)   NOT NULL
+    CHECK (payment_status IN ('pending','paid','failed','rejected','refunded')),
+  amount         NUMERIC(10,2) NOT NULL CHECK (amount >= 0),
+  paid_at        TIMESTAMPTZ   DEFAULT now(),
+  FOREIGN KEY (user_id)    REFERENCES client(user_id)            ON DELETE CASCADE,
+  FOREIGN KEY (plan_id)    REFERENCES subscription_plan(plan_id) ON DELETE SET NULL,
+  FOREIGN KEY (ride_id)    REFERENCES ride(ride_id)              ON DELETE SET NULL,
+  FOREIGN KEY (station_id) REFERENCES station(station_id)        ON DELETE SET NULL
+);
+
+-- 9. MAINTENANCE LOG
+CREATE TABLE maintenance_log (
+  maintenance_id      INTEGER             PRIMARY KEY,
+  bike_id             INTEGER            NOT NULL,
+  station_id          INTEGER,
+  opened_ts           TIMESTAMP          NOT NULL DEFAULT now(),
+  closed_ts           TIMESTAMP,
+  latitude_reported   NUMERIC(9,6)       NOT NULL CHECK (latitude_reported  BETWEEN -90  AND 90),
+  longitude_reported  NUMERIC(9,6)       NOT NULL CHECK (longitude_reported BETWEEN -180 AND 180),
+  alert_type          VARCHAR(80)        NOT NULL,
+  maintenance_status  maintenance_status NOT NULL DEFAULT 'open',
+  employee_name       VARCHAR(120),
+  FOREIGN KEY (bike_id)    REFERENCES bike(bike_id),
+  FOREIGN KEY (station_id) REFERENCES station(station_id),
+  CHECK (closed_ts IS NULL OR closed_ts >= opened_ts)
+);
+
+-- INDEXES
+CREATE INDEX idx_client_status ON client(status);
+
+CREATE INDEX idx_sub_plan_user_id ON subscription_plan(user_id);
+CREATE INDEX idx_sub_plan_type ON subscription_plan(plan_type);
+CREATE INDEX idx_sub_plan_status ON subscription_plan(status);
+
+CREATE INDEX idx_psa_plan_id ON plan_station_access(plan_id);
+CREATE INDEX idx_psa_station_id ON plan_station_access(station_id);
+
+CREATE INDEX idx_payment_user_id ON payment(user_id);
+CREATE INDEX idx_payment_plan_id ON payment(plan_id);
+CREATE INDEX idx_payment_ride_id ON payment(ride_id);
+CREATE INDEX idx_payment_station_id ON payment(station_id);
+CREATE INDEX idx_payment_status ON payment(payment_status);
+
+CREATE INDEX idx_dock_station_id ON dock(station_id);
+CREATE INDEX idx_dock_status ON dock(dock_status);
+
+CREATE INDEX idx_bike_station_id ON bike(station_id);
+CREATE INDEX idx_bike_dock_id ON bike(dock_id);
+CREATE INDEX idx_bike_status ON bike(status);
+CREATE INDEX idx_bike_type ON bike(type);
+
+CREATE INDEX idx_ride_user_id ON ride(user_id);
+CREATE INDEX idx_ride_bike_id ON ride(bike_id);
+CREATE INDEX idx_ride_start_station_id ON ride(start_station_id);
+CREATE INDEX idx_ride_end_station_id ON ride(end_station_id);
+CREATE INDEX idx_ride_start_ts ON ride(start_ts);
+CREATE INDEX idx_ride_status ON ride(ride_status);
+
+CREATE INDEX idx_maintenance_bike_id ON maintenance_log(bike_id);
+CREATE INDEX idx_maintenance_station_id ON maintenance_log(station_id);
+CREATE INDEX idx_maintenance_status ON maintenance_log(maintenance_status);
+CREATE INDEX idx_maintenance_opened_ts ON maintenance_log(opened_ts);
