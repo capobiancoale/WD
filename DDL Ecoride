@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS subscription_plan CASCADE;
 DROP TABLE IF EXISTS client CASCADE;
 
 -- Drop ENUMs on full reset
+
 DROP TYPE IF EXISTS user_status CASCADE;
 DROP TYPE IF EXISTS bike_type CASCADE;
 DROP TYPE IF EXISTS bike_status CASCADE;
@@ -45,7 +46,6 @@ CREATE TABLE client (
 CREATE TABLE subscription_plan (
   plan_id INTEGER PRIMARY KEY,
 
-  -- Collegamento diretto a client
   user_id INTEGER NOT NULL,
 
   plan_type VARCHAR(20) NOT NULL
@@ -54,14 +54,13 @@ CREATE TABLE subscription_plan (
   price NUMERIC(10,2) NOT NULL
     CHECK (price >= 0),
 
-  -- Durata in giorni (NULL = pay_as_you_go)
+  -- Duration in days (NULL = pay_as_you_go)
   length_days INTEGER
     CHECK (length_days IS NULL OR length_days > 0),
 
   start_date DATE NOT NULL,
   end_date DATE,
 
-  -- Status aggiunto
   status VARCHAR(20) NOT NULL DEFAULT 'active'
     CHECK (status IN ('active','cancelled','suspended','expired')), 
 
@@ -80,7 +79,7 @@ CREATE TABLE station (
 
 
 -- 4. PLAN STATION ACCESS
--- Tabella ponte subscription_plan ↔ station
+-- Bridge Table subscription_plan ↔ station
 
 CREATE TABLE plan_station_access (
   plan_id INTEGER NOT NULL,
