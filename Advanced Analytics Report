@@ -1,6 +1,8 @@
--- Advanced Analytical Reports --
+--- Advanced Analytical Report ---
 
 --- Station Popularity
+-- We need to know from which station start most of the rides, then order form the most used station to the least one, and then take the first 5 
+
 SELECT start_station_id AS station_id,
 COUNT(*) AS rides_started
 FROM ride
@@ -9,52 +11,43 @@ ORDER BY rides_started DESC
 LIMIT 5;
 
 
---- Revenue Analysis
-SELECT
-DATE_TRUNC('month', p.paid_at) AS month,
-COALESCE(sp.plan_type, 'pay_as_you_go') AS membership_type,
-SUM(p.amount) AS total_revenue
-FROM payment p
-LEFT JOIN subscription_plan sp 
-       ON p.plan_id = sp.plan_id
-GROUP BY month, membership_type
-ORDER BY month,
-         total_revenue DESC;
+--- Revenue Analysis 
+--- We need to calculate the total for month and plan
+
+select DATE_TRUNC('month', paid_at) as month, -- to aggregate payments by month
+plan_id,
+sum(amount) as total_revenue
+from payment
+group by month, plan_id
+order by month;
 
 
 --- Manteinance Alert
+--- We need to use JOIN, take oinly electri bikes with battery < 20%, which are currently docked  
+
 SELECT b.bike_id, b.battery_level, b.station_id, b.dock_id
 FROM bike b
 JOIN dock d ON b.dock_id = d.dock_id
 WHERE b.type = 'ELECTRIC'
 AND b.battery_level < 20
-ND b.dock_id IS NOT NULL;
-
---- User Behavior
-WITH user_dist AS (
-SELECT user_id,
-SUM(distance_km) AS total_distance
-FROM ride
-WHERE distance_km IS NOT NULL
-GROUP BY user_id
-),
-avg_dist AS (
-SELECT AVG(total_distance) AS avg_distance
-FROM user_dist
-)
-SELECT 
-u.user_id,
-u.total_distance
-FROM user_dist u, avg_dist a
-WHERE u.total_distance > a.avg_distance
-ORDER BY u.total_distance DESC;
+AND b.dock_id IS NOT NULL;
 
 
---- Avrage distance ridden --- (not a query)
-SELECT AVG(total_distance) AS avg_distance
-FROM (
-    SELECT user_id, SUM(distance_km) AS total_distance
-    FROM ride
-    WHERE distance_km IS NOT NULL
-    GROUP BY user_id
-) AS user_dist;
+--- User Behavior 
+--- We need to find clients who have ridden more than average distance, sorted by ridden distance
+---> We calculate the total distance ridden by each client, then compute the average. Then keep clients who are above average and order them by distance ridden 
+
+select user_id, sum(distance_km) as total_distance
+from ride
+where distance_km is not null
+group by user_id
+having sum(distance_km) > (
+  select avg(total_dist) 
+  from (
+  select sum(distance_km) as total_dist
+  from ride where distance_km is not null
+  group by user_id) 
+  as sub)
+order by total_distance desc;
+
+
