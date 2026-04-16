@@ -138,7 +138,7 @@ Provides insight into usage behaviour, station proximity, and potential operatio
 
 **Alessio Capobianco**
 - 📧 [Alessiocapobianco3@gmail.com](mailto:Alessiocapobianco3@gmail.com)
-- 💼 [LinkedIn](https://www.linkedin.com/in/alessiocapobianco
+- 💼 [LinkedIn](https://www.linkedin.com/in/alessio-capobianco/)
 
 
 ---
